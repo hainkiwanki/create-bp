@@ -4,6 +4,8 @@ import { execa } from 'execa';
 import degit from 'degit';
 import fs from 'fs/promises';
 import path from 'path';
+import { rimraf } from 'rimraf';
+import 'dotenv/config';
 
 const TEMPLATE_REPO = process.env.TEMPLATE_REPO!;
 if (!TEMPLATE_REPO) {
@@ -14,7 +16,9 @@ if (!TEMPLATE_REPO) {
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     const emitter = degit(`${TEMPLATE_REPO}/${subPath}`, { mode: 'git', force: true });
     await emitter.clone(dest);
-    await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
+
+    const gitDir = path.join(dest, '.git');
+    await rimraf(gitDir);
 }
 
 async function createMonorepo(targetDir: string): Promise<void> {
