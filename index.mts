@@ -7,11 +7,7 @@ import path from 'path';
 import { rimraf } from 'rimraf';
 import 'dotenv/config';
 
-const TEMPLATE_REPO = process.env.TEMPLATE_REPO!;
-if (!TEMPLATE_REPO) {
-    console.error('❌ Missing TEMPLATE_REPO in .env');
-    process.exit(1);
-}
+const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
 
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     const emitter = degit(`${TEMPLATE_REPO}/${subPath}`, { mode: 'git', force: true });
