@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import prompts from 'prompts';
 import { execa } from 'execa';
-import degit from 'degit';
 import fs from 'fs/promises';
 import path from 'path';
 import 'dotenv/config';
@@ -9,15 +8,9 @@ import 'dotenv/config';
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
 
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
-    const emitter = degit(`${TEMPLATE_REPO}/${subPath}`, { mode: 'git', force: true });
-    await emitter.clone(dest);
-
-    const gitDir = path.join(dest, '.git');
-    try {
-        await fs.rm(gitDir, { recursive: true, force: true });
-    } catch {
-        console.warn("⚠️ Couldn't remove .git folder, continuing anyway...");
-    }
+    // ✅ works on Windows, macOS, Linux
+    await execa('git', ['clone', '--depth', '1', `${TEMPLATE_REPO}/${subPath}`, dest]);
+    await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
 }
 
 async function createMonorepo(targetDir: string): Promise<void> {
@@ -28,8 +21,7 @@ async function createMonorepo(targetDir: string): Promise<void> {
     ]);
 
     console.log('\n📦 Cloning monorepo base...');
-    const monoRepo = degit(`${TEMPLATE_REPO}/template-monorepo`, { mode: 'git', force: true });
-    await monoRepo.clone(targetDir);
+    await cloneTemplate('template-monorepo', targetDir);
 
     const pkgDir = path.join(targetDir, 'packages');
     await fs.mkdir(pkgDir, { recursive: true });
