@@ -1,7 +1,7 @@
 {
     "name": "@binki/create-bp",
     "description": "CLI tool to scaffold frontend, backend, or monorepo projects from binki-templates",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "type": "module",
     "author": "hainkiwanki",
     "license": "MIT",
@@ -12,10 +12,12 @@
     "dependencies": {
         "dotenv": "^17.2.3",
         "execa": "^9.6.0",
+        "fs-extra": "^11.3.2",
         "prompts": "^2.4.2"
     },
     "devDependencies": {
         "@types/degit": "^2.8.6",
+        "@types/fs-extra": "^11",
         "@types/node": "^24.8.0",
         "@types/prompts": "^2.4.9",
         "typescript": "^5.9.3"

@@ -1,87 +1,28 @@
-#!/usr/bin/env node
-import prompts from 'prompts';
 import { execa } from 'execa';
-import fs from 'fs/promises';
+import fs from 'fs-extra';
 import path from 'path';
-import 'dotenv/config';
 
-const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
+const TEMPLATE_REPO = 'https://github.com/hainkiwanki/templates.git';
 
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
-    // ✅ works on Windows, macOS, Linux
-    await execa('git', ['clone', '--depth', '1', `${TEMPLATE_REPO}/${subPath}`, dest]);
-    await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
-}
+    const tmpDir = path.join(process.cwd(), `tmp-${Date.now()}`);
 
-async function createMonorepo(targetDir: string): Promise<void> {
-    const { feCount, beCount, addShared } = await prompts([
-        { type: 'number', name: 'feCount', message: 'How many frontends?', initial: 1 },
-        { type: 'number', name: 'beCount', message: 'How many backends?', initial: 1 },
-        { type: 'confirm', name: 'addShared', message: 'Add shared package?', initial: true },
-    ]);
+    // Clone full repo shallowly
+    await execa('git', ['clone', '--depth', '1', TEMPLATE_REPO, tmpDir]);
 
-    console.log('\n📦 Cloning monorepo base...');
-    await cloneTemplate('template-monorepo', targetDir);
+    // Copy only the chosen template folder
+    await fs.copy(path.join(tmpDir, subPath), dest, { overwrite: true });
 
-    const pkgDir = path.join(targetDir, 'packages');
-    await fs.mkdir(pkgDir, { recursive: true });
-
-    const clone = async (sub: string, name: string) => {
-        const dest = path.join(pkgDir, name);
-        await cloneTemplate(sub, dest);
-        console.log(`  → created ${name}`);
-    };
-
-    for (let i = 1; i <= feCount; i++) await clone('template-frontend', `fe-app${i}`);
-    for (let i = 1; i <= beCount; i++) await clone('template-backend', `be-api${i}`);
-    if (addShared) await clone('packages/shared', 'shared');
-
-    console.log('\n📦 Installing dependencies (this might take a bit)...');
-    await execa('yarn', ['install'], { cwd: targetDir, stdio: 'inherit' });
-
-    console.log('\n✅ Monorepo created successfully!');
-}
-
-async function main(): Promise<void> {
-    const { type, name } = await prompts([
-        {
-            type: 'select',
-            name: 'type',
-            message: 'Select project type:',
-            choices: [
-                { title: 'Frontend (Vue + Vite + Vuetify)', value: 'template-frontend' },
-                { title: 'Backend (Fastify + TS)', value: 'template-backend' },
-                { title: 'Monorepo (frontend + backend + shared)', value: 'template-monorepo' },
-            ],
-        },
-        {
-            type: 'text',
-            name: 'name',
-            message: 'Project name:',
-            validate: (v) => (v.trim() ? true : 'Required'),
-        },
-    ]);
-
-    const targetDir = path.resolve(process.cwd(), name);
-    await fs.mkdir(targetDir, { recursive: true });
-
-    if (type === 'template-monorepo') {
-        await createMonorepo(targetDir);
-        return;
+    // Merge in "common" if exists
+    const commonPath = path.join(tmpDir, 'common');
+    try {
+        await fs.copy(commonPath, dest, { overwrite: true });
+        console.log('🧩 merged common files');
+    } catch {
+        /* no common folder → ignore */
     }
 
-    console.log(`\n📦 Cloning ${type}...`);
-    await cloneTemplate(type, targetDir);
-
-    console.log('📦 Installing dependencies...');
-    await execa('yarn', ['install'], { cwd: targetDir, stdio: 'inherit' });
-
-    console.log(`\n✅ ${name} is ready!`);
-    console.log(`cd ${name}`);
-    console.log('yarn dev');
+    // Cleanup
+    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
 }
-
-main().catch((err) => {
-    console.error('❌ Error:', err);
-    process.exit(1);
-});
