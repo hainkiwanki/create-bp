@@ -4,7 +4,6 @@ import { execa } from 'execa';
 import degit from 'degit';
 import fs from 'fs/promises';
 import path from 'path';
-import { rimraf } from 'rimraf';
 import 'dotenv/config';
 
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
@@ -14,7 +13,11 @@ async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     await emitter.clone(dest);
 
     const gitDir = path.join(dest, '.git');
-    await rimraf(gitDir);
+    try {
+        await fs.rm(gitDir, { recursive: true, force: true });
+    } catch {
+        console.warn("⚠️ Couldn't remove .git folder, continuing anyway...");
+    }
 }
 
 async function createMonorepo(targetDir: string): Promise<void> {
