@@ -1,11 +1,11 @@
 {
     "name": "@binki/create-bp",
     "description": "CLI tool to scaffold frontend, backend, or monorepo projects from binki-templates",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "module",
     "author": "hainkiwanki",
     "license": "MIT",
-    "bin": "./dist/index.js",
+    "bin": "./dist/index.mjs",
     "scripts": {
         "build": "tsc"
     },
