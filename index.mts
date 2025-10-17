@@ -6,12 +6,16 @@ import 'dotenv/config';
 import fs from 'fs-extra';
 
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
-
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     const tmpDir = path.join(process.cwd(), `tmp-${Date.now()}`);
 
     // Clone full repo shallowly
     await execa('git', ['clone', '--depth', '1', TEMPLATE_REPO, tmpDir]);
+
+    // Schedule cleanup when the process exits
+    process.on('exit', () => {
+        fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+    });
 
     // Copy only the chosen template folder
     await fs.copy(path.join(tmpDir, subPath), dest, { overwrite: true });
@@ -25,10 +29,10 @@ async function cloneTemplate(subPath: string, dest: string): Promise<void> {
         /* no common folder → ignore */
     }
 
-    // Cleanup
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    // Remove .git from destination immediately
     await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
 }
+
 async function createMonorepo(targetDir: string): Promise<void> {
     const { feCount, beCount, addShared } = await prompts([
         { type: 'number', name: 'feCount', message: 'How many frontends?', initial: 1 },
