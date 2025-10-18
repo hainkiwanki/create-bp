@@ -8,29 +8,20 @@ import fs from 'fs-extra';
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     const tmpDir = path.join(process.cwd(), `tmp-${Date.now()}`);
-
-    // Clone full repo shallowly
-    await execa('git', ['clone', '--depth', '1', TEMPLATE_REPO, tmpDir]);
-
-    // Schedule cleanup when the process exits
-    process.on('exit', () => {
-        fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    });
-
-    // Copy only the chosen template folder
-    await fs.copy(path.join(tmpDir, subPath), dest, { overwrite: true });
-
-    // Merge in "common" if exists
-    const commonPath = path.join(tmpDir, 'common');
     try {
-        await fs.copy(commonPath, dest, { overwrite: true });
-        console.log('🧩 merged common files');
-    } catch {
-        /* no common folder → ignore */
-    }
+        await execa('git', ['clone', '--depth', '1', TEMPLATE_REPO, tmpDir]);
+        await fs.copy(path.join(tmpDir, subPath), dest, { overwrite: true });
 
-    // Remove .git from destination immediately
-    await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
+        const commonPath = path.join(tmpDir, 'common');
+        if (await fs.pathExists(commonPath)) {
+            await fs.copy(commonPath, dest, { overwrite: true });
+            console.log('🧩 merged common files');
+        }
+
+        await fs.rm(path.join(dest, '.git'), { recursive: true, force: true });
+    } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+    }
 }
 
 async function createMonorepo(targetDir: string): Promise<void> {
@@ -54,7 +45,9 @@ async function createMonorepo(targetDir: string): Promise<void> {
 
     for (let i = 1; i <= feCount; i++) await clone('template-frontend', `fe-app${i}`);
     for (let i = 1; i <= beCount; i++) await clone('template-backend', `be-api${i}`);
-    if (addShared) await clone('packages/shared', 'shared');
+    if (addShared) {
+        await clone('packages/shared', 'shared');
+    }
 
     console.log('\n📦 Installing dependencies (this might take a bit)...');
     await execa('yarn', ['install'], { cwd: targetDir, stdio: 'inherit' });
