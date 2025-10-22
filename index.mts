@@ -4,8 +4,16 @@ import { execa } from 'execa';
 import path from 'path';
 import 'dotenv/config';
 import fs from 'fs-extra';
+import { execSync } from 'child_process';
 
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
+const yarnrcPath = path.join(process.cwd(), '.yarnrc.yml');
+const yarnrcContent = `npmRegistryServer: "https://verdaccio.binki.dev"
+npmScopes:
+  binki:
+    npmRegistryServer: "https://verdaccio.binki.dev"
+`;
+
 async function cloneTemplate(subPath: string, dest: string): Promise<void> {
     const tmpDir = path.join(process.cwd(), `tmp-${Date.now()}`);
     try {
@@ -55,7 +63,29 @@ async function createMonorepo(targetDir: string): Promise<void> {
     console.log('\n✅ Monorepo created successfully!');
 }
 
+const ensureYarnConfig = async (): Promise<void> => {
+    const cwd = process.cwd();
+
+    if (!fs.existsSync(yarnrcPath)) {
+        console.log('🪄 Creating .yarnrc.yml for Verdaccio...');
+        await fs.writeFile(yarnrcPath, yarnrcContent, 'utf8');
+    }
+
+    // Verify Yarn login (optional but nice)
+    try {
+        execSync('yarn npm whoami', { stdio: 'ignore', cwd });
+    } catch {
+        console.log('🔐 Not logged in to Verdaccio, attempting login...');
+        try {
+            execSync('yarn npm login --scope binki', { stdio: 'inherit', cwd });
+        } catch {
+            console.warn('⚠️ Login skipped or failed. You may need to authenticate manually later.');
+        }
+    }
+};
+
 async function main(): Promise<void> {
+    await ensureYarnConfig();
     const { type, name } = await prompts([
         {
             type: 'select',
