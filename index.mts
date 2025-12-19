@@ -8,7 +8,7 @@ import { execSync } from 'child_process';
 
 const TEMPLATE_REPO = 'git@github.com:hainkiwanki/templates.git';
 const yarnrcPath = path.join(process.cwd(), '.yarnrc.yml');
-const yarnrcContent = `npmRegistryServer: "https://verdaccio.binki.dev"
+const yarnrcContent = `npmRegistryServer: https://registry.npmjs.org
 npmScopes:
   binki:
     npmRegistryServer: "https://verdaccio.binki.dev"
